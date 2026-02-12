@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mustangsky/scaleSyncGo/internal/config"
+	"github.com/walkerscm/scaleSyncGo/internal/config"
 	"github.com/spf13/cobra"
 )
 

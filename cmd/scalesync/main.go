@@ -1,6 +1,6 @@
 package main
 
-import "github.com/mustangsky/scaleSyncGo/internal/cli"
+import "github.com/walkerscm/scaleSyncGo/internal/cli"
 
 func main() {
 	cli.Execute()

@@ -1,4 +1,4 @@
-module github.com/mustangsky/scaleSyncGo
+module github.com/walkerscm/scaleSyncGo
 
 go 1.22
 
