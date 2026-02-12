@@ -1,0 +1,7 @@
+services:
+  scalesync:
+    build: .
+    volumes:
+      - ./config.yaml:/config.yaml:ro
+    environment:
+      - SCALESYNC_LOG_LEVEL=info
