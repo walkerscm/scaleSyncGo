@@ -42,6 +42,42 @@ func ListTables(ctx context.Context, db *sql.DB) ([]string, error) {
 	return tables, rows.Err()
 }
 
+// TableRowCount holds a table name and its row count.
+type TableRowCount struct {
+	Name     string
+	RowCount int64
+}
+
+// ListTablesWithCounts returns all user tables with their row counts using
+// sys.dm_db_partition_stats (heap/clustered index only) for fast results.
+func ListTablesWithCounts(ctx context.Context, db *sql.DB) ([]TableRowCount, error) {
+	query := `SELECT s.name + '.' + t.name, SUM(p.row_count)
+		FROM sys.tables t
+		JOIN sys.schemas s ON t.schema_id = s.schema_id
+		JOIN sys.dm_db_partition_stats p ON t.object_id = p.object_id AND p.index_id IN (0, 1)
+		GROUP BY s.name, t.name
+		ORDER BY s.name, t.name`
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rows, err := db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("querying table counts: %w", err)
+	}
+	defer rows.Close()
+
+	var results []TableRowCount
+	for rows.Next() {
+		var r TableRowCount
+		if err := rows.Scan(&r.Name, &r.RowCount); err != nil {
+			return nil, fmt.Errorf("scanning table count: %w", err)
+		}
+		results = append(results, r)
+	}
+	return results, rows.Err()
+}
+
 // GetTableColumns returns the column definitions for a given schema.table.
 func GetTableColumns(ctx context.Context, db *sql.DB, schemaTable string) ([]TableColumn, error) {
 	schema, table := splitSchemaTable(schemaTable)
