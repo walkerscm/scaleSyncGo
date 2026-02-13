@@ -54,8 +54,19 @@ func importFile(ctx context.Context, db *sql.DB, csvPath, schemaTable string, ba
 		dbColumns[i] = m.DBColumn.Name
 	}
 
+	// Fetch primary key columns for upsert support
+	pkColumns, err := database.GetPrimaryKeyColumns(ctx, db, schemaTable)
+	if err != nil {
+		return 0, fmt.Errorf("getting primary key columns: %w", err)
+	}
+	if len(pkColumns) > 0 {
+		fmt.Fprintf(w, "Primary key: %s\n", strings.Join(pkColumns, ", "))
+	} else {
+		fmt.Fprintln(w, "No primary key found — using insert-only mode")
+	}
+
 	// Start worker pool
-	pool := worker.NewPool(db, schemaTable, dbColumns, mapResult.Mapped, workers)
+	pool := worker.NewPool(db, schemaTable, dbColumns, pkColumns, mapResult.Mapped, workers)
 	pool.Start(ctx)
 
 	// Progress bar

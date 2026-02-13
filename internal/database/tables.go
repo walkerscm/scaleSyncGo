@@ -109,6 +109,41 @@ func GetTableColumns(ctx context.Context, db *sql.DB, schemaTable string) ([]Tab
 	return cols, rows.Err()
 }
 
+// GetPrimaryKeyColumns returns the column names that form the primary key for a given schema.table.
+func GetPrimaryKeyColumns(ctx context.Context, db *sql.DB, schemaTable string) ([]string, error) {
+	schema, table := splitSchemaTable(schemaTable)
+
+	query := `SELECT kcu.COLUMN_NAME
+		FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+		JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+			ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
+			AND tc.TABLE_SCHEMA = kcu.TABLE_SCHEMA
+			AND tc.TABLE_NAME = kcu.TABLE_NAME
+		WHERE tc.CONSTRAINT_TYPE = 'PRIMARY KEY'
+			AND tc.TABLE_SCHEMA = @schema
+			AND tc.TABLE_NAME = @table
+		ORDER BY kcu.ORDINAL_POSITION`
+
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	rows, err := db.QueryContext(ctx, query, sql.Named("schema", schema), sql.Named("table", table))
+	if err != nil {
+		return nil, fmt.Errorf("querying primary key columns: %w", err)
+	}
+	defer rows.Close()
+
+	var cols []string
+	for rows.Next() {
+		var col string
+		if err := rows.Scan(&col); err != nil {
+			return nil, fmt.Errorf("scanning PK column: %w", err)
+		}
+		cols = append(cols, col)
+	}
+	return cols, rows.Err()
+}
+
 // splitSchemaTable splits "schema.table" into its parts. Defaults to "dbo" if no dot.
 func splitSchemaTable(schemaTable string) (string, string) {
 	for i, ch := range schemaTable {
