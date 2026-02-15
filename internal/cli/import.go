@@ -33,6 +33,7 @@ func init() {
 
 func runImport(cmd *cobra.Command, args []string) error {
 	envPath, _ := cmd.Flags().GetString("env")
+	target, _ := cmd.Flags().GetString("target")
 	batchSize, _ := cmd.Flags().GetInt("batch-size")
 	workers, _ := cmd.Flags().GetInt("workers")
 	filePath, _ := cmd.Flags().GetString("file")
@@ -81,7 +82,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Selected: %s\n", filepath.Base(selectedCSV))
 
 	// 2. Load database config and connect
-	dbCfg, err := config.LoadDatabaseConfig(envPath)
+	dbCfg, err := config.LoadDatabaseConfig(envPath, target)
 	if err != nil {
 		return fmt.Errorf("loading database config: %w", err)
 	}

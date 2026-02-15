@@ -109,6 +109,29 @@ func GetTableColumns(ctx context.Context, db *sql.DB, schemaTable string) ([]Tab
 	return cols, rows.Err()
 }
 
+// HasIdentityColumn returns true if the given table has an identity column.
+func HasIdentityColumn(ctx context.Context, db *sql.DB, schemaTable string) (bool, error) {
+	schema, table := splitSchemaTable(schemaTable)
+
+	query := `SELECT 1 FROM sys.columns c
+		JOIN sys.tables t ON c.object_id = t.object_id
+		JOIN sys.schemas s ON t.schema_id = s.schema_id
+		WHERE s.name = @schema AND t.name = @table AND c.is_identity = 1`
+
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	var one int
+	err := db.QueryRowContext(ctx, query, sql.Named("schema", schema), sql.Named("table", table)).Scan(&one)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("checking identity column: %w", err)
+	}
+	return true, nil
+}
+
 // GetPrimaryKeyColumns returns the column names that form the primary key for a given schema.table.
 func GetPrimaryKeyColumns(ctx context.Context, db *sql.DB, schemaTable string) ([]string, error) {
 	schema, table := splitSchemaTable(schemaTable)

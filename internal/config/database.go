@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -16,23 +17,40 @@ type DatabaseConfig struct {
 	Password string
 }
 
-// LoadDatabaseConfig reads the .env file at envPath and returns the target
-// database configuration from TARGET_SERVER, TARGET_DATABASE, TARGET_USERNAME,
-// and TARGET_DB_PASSWORD environment variables.
-func LoadDatabaseConfig(envPath string) (*DatabaseConfig, error) {
+// targetEnvPrefix maps a --target value to its env var prefix.
+var targetEnvPrefix = map[string]string{
+	"prod": "PROD",
+	"test": "TEST",
+}
+
+// ValidTargets returns the accepted --target values.
+func ValidTargets() []string {
+	return []string{"prod", "test"}
+}
+
+// LoadDatabaseConfig reads the .env file at envPath and returns the database
+// configuration for the given target ("prod" or "test"). The env vars are
+// read with the prefix {TARGET}_{FIELD}, e.g. PROD_SERVER or TEST_SERVER.
+func LoadDatabaseConfig(envPath, target string) (*DatabaseConfig, error) {
 	if err := godotenv.Load(envPath); err != nil {
 		return nil, fmt.Errorf("loading %s: %w", envPath, err)
 	}
 
+	prefix, ok := targetEnvPrefix[strings.ToLower(target)]
+	if !ok {
+		return nil, fmt.Errorf("unknown target %q (valid: %s)", target, strings.Join(ValidTargets(), ", "))
+	}
+
 	cfg := &DatabaseConfig{
-		Server:   os.Getenv("TARGET_SERVER"),
-		Database: os.Getenv("TARGET_DATABASE"),
-		Username: os.Getenv("TARGET_USERNAME"),
-		Password: os.Getenv("TARGET_DB_PASSWORD"),
+		Server:   os.Getenv(prefix + "_SERVER"),
+		Database: os.Getenv(prefix + "_DATABASE"),
+		Username: os.Getenv(prefix + "_USERNAME"),
+		Password: os.Getenv(prefix + "_DB_PASSWORD"),
 	}
 
 	if cfg.Server == "" || cfg.Database == "" || cfg.Username == "" || cfg.Password == "" {
-		return nil, fmt.Errorf("missing required env vars: TARGET_SERVER, TARGET_DATABASE, TARGET_USERNAME, TARGET_DB_PASSWORD")
+		return nil, fmt.Errorf("missing required env vars: %s_SERVER, %s_DATABASE, %s_USERNAME, %s_DB_PASSWORD",
+			prefix, prefix, prefix, prefix)
 	}
 
 	return cfg, nil

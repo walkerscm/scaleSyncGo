@@ -65,8 +65,17 @@ func importFile(ctx context.Context, db *sql.DB, csvPath, schemaTable string, ba
 		fmt.Fprintln(w, "No primary key found — using insert-only mode")
 	}
 
+	// Check for identity columns
+	hasIdentity, err := database.HasIdentityColumn(ctx, db, schemaTable)
+	if err != nil {
+		return 0, fmt.Errorf("checking identity column: %w", err)
+	}
+	if hasIdentity {
+		fmt.Fprintln(w, "Identity column detected — IDENTITY_INSERT will be enabled during merge")
+	}
+
 	// Start worker pool
-	pool := worker.NewPool(db, schemaTable, dbColumns, pkColumns, mapResult.Mapped, workers)
+	pool := worker.NewPool(db, schemaTable, dbColumns, pkColumns, hasIdentity, mapResult.Mapped, workers)
 	pool.Start(ctx)
 
 	// Progress bar

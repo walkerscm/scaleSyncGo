@@ -30,6 +30,7 @@ func init() {
 
 func runListTables(cmd *cobra.Command, args []string) error {
 	envPath, _ := cmd.Flags().GetString("env")
+	target, _ := cmd.Flags().GetString("target")
 	showCounts, _ := cmd.Flags().GetBool("counts")
 	mdPath, _ := cmd.Flags().GetString("markdown")
 	mdShort, _ := cmd.Flags().GetBool("md")
@@ -40,7 +41,7 @@ func runListTables(cmd *cobra.Command, args []string) error {
 			fmt.Sprintf("tables-report-%s.md", time.Now().Format("20060102-150405")))
 	}
 
-	dbCfg, err := config.LoadDatabaseConfig(envPath)
+	dbCfg, err := config.LoadDatabaseConfig(envPath, target)
 	if err != nil {
 		return err
 	}

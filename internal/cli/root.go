@@ -32,4 +32,5 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().String("log-level", "info", "log level (debug, info, warn, error)")
 	rootCmd.PersistentFlags().StringP("output", "o", "text", "output format (text, json)")
+	rootCmd.PersistentFlags().StringP("target", "t", "prod", `target database: "prod" or "test"`)
 }

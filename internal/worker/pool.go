@@ -28,6 +28,7 @@ type Pool struct {
 	schemaTable string
 	columns     []string
 	pkColumns   []string
+	hasIdentity bool
 	mapping     []database.ColumnMapping
 	workers     int
 	jobs        chan Job
@@ -36,12 +37,13 @@ type Pool struct {
 }
 
 // NewPool creates a worker pool ready to process batches.
-func NewPool(db *sql.DB, schemaTable string, columns []string, pkColumns []string, mapping []database.ColumnMapping, workers int) *Pool {
+func NewPool(db *sql.DB, schemaTable string, columns []string, pkColumns []string, hasIdentity bool, mapping []database.ColumnMapping, workers int) *Pool {
 	return &Pool{
 		db:          db,
 		schemaTable: schemaTable,
 		columns:     columns,
 		pkColumns:   pkColumns,
+		hasIdentity: hasIdentity,
 		mapping:     mapping,
 		workers:     workers,
 		jobs:        make(chan Job, workers*2),
@@ -57,7 +59,7 @@ func (p *Pool) Start(ctx context.Context) {
 			defer p.wg.Done()
 			for job := range p.jobs {
 				converted := ConvertBatch(job.Rows, p.mapping)
-				err := database.InsertBatch(ctx, p.db, p.schemaTable, p.columns, p.pkColumns, converted)
+				err := database.InsertBatch(ctx, p.db, p.schemaTable, p.columns, p.pkColumns, p.hasIdentity, converted)
 				if err != nil {
 					err = fmt.Errorf("worker %d, batch %d: %w", id, job.BatchNum, err)
 				}

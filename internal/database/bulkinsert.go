@@ -13,7 +13,7 @@ import (
 // InsertBatch performs an upsert of rows into the target table using the
 // temp-table + MERGE pattern. If pkColumns is empty, it falls back to a
 // straight bulk copy (insert-only).
-func InsertBatch(ctx context.Context, db *sql.DB, schemaTable string, columns []string, pkColumns []string, rows [][]interface{}) error {
+func InsertBatch(ctx context.Context, db *sql.DB, schemaTable string, columns []string, pkColumns []string, hasIdentity bool, rows [][]interface{}) error {
 	if len(pkColumns) == 0 {
 		return insertBatchDirect(ctx, db, schemaTable, columns, rows)
 	}
@@ -50,9 +50,19 @@ func InsertBatch(ctx context.Context, db *sql.DB, schemaTable string, columns []
 	}
 
 	// 3. MERGE into target.
+	if hasIdentity {
+		if _, err := tx.ExecContext(ctx, fmt.Sprintf("SET IDENTITY_INSERT %s ON", schemaTable)); err != nil {
+			return fmt.Errorf("identity insert on: %w", err)
+		}
+	}
 	mergeSQL := buildMergeSQL(schemaTable, columns, pkColumns)
 	if _, err := tx.ExecContext(ctx, mergeSQL); err != nil {
 		return fmt.Errorf("merge: %w", err)
+	}
+	if hasIdentity {
+		if _, err := tx.ExecContext(ctx, fmt.Sprintf("SET IDENTITY_INSERT %s OFF", schemaTable)); err != nil {
+			return fmt.Errorf("identity insert off: %w", err)
+		}
 	}
 
 	// 4. Drop temp table.

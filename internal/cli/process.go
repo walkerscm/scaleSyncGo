@@ -44,6 +44,7 @@ type csvMatch struct {
 
 func runProcess(cmd *cobra.Command, args []string) error {
 	envPath, _ := cmd.Flags().GetString("env")
+	target, _ := cmd.Flags().GetString("target")
 	batchSize, _ := cmd.Flags().GetInt("batch-size")
 	workers, _ := cmd.Flags().GetInt("workers")
 	autoConfirm, _ := cmd.Flags().GetBool("yes")
@@ -60,7 +61,7 @@ func runProcess(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Found %d CSV file(s) in %s/\n", len(csvFiles), inputDir)
 
 	// 2. Connect to database
-	dbCfg, err := config.LoadDatabaseConfig(envPath)
+	dbCfg, err := config.LoadDatabaseConfig(envPath, target)
 	if err != nil {
 		return fmt.Errorf("loading database config: %w", err)
 	}
