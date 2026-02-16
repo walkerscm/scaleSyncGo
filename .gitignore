@@ -28,3 +28,7 @@ Thumbs.db
 # Config overrides
 config.local.yaml
 .env
+
+# CSV data
+csv_input/
+csv_process/
